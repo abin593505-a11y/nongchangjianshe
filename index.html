@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能投资计算器 | Investment Calculator</title>
+    <title>RS财富增长计算器 | Investment Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
@@ -342,29 +342,29 @@
             const dailyProfit = project.amount * (project.percent / 100);
             const totalReturn = project.amount + (dailyProfit * project.days);
             
-            const chinese = `🎉 恭喜您成功认购【${project.name}】${project.days}天期项目！
+            const chinese = `🎉 恭喜您成功认购*【${project.name}】* *${project.days}天*期项目！
 您的资金已正式进入高效运行模式，开启收益之旅 ✨
 💰 投入金额： *RM${project.amount.toFixed(2)}*
 📈 每日收益： *RM${dailyProfit.toFixed(2)}*
-⏰ 项目周期： ${project.days}天
-📊 预期回报： 您将获得总计 *RM${totalReturn.toFixed(2)}*（本金+收益）。
-💡 选择大于努力，行动决定未来。今天的小投入，就是明天的大回报。继续保持，您值得更好的收获！✨`;
+⏰ 项目周期： *${project.days}天*
+📊 预期回报： 您将获得总计 *RM${totalReturn.toFixed(2)}*（*本金+收益*）。
+💡 *选择大于努力，行动决定未来。今天的小投入，就是明天的大回报。继续保持，您值得更好的收获！*✨`;
 
-            const english = `🎉 Congratulations on successfully subscribing to the 【${project.name}】 ${project.days}-day project!
+            const english = `🎉 Congratulations on successfully subscribing to the *【${project.name}】*  *${project.days}-day* project!
 Your funds are now in high-efficiency operation mode, starting the journey of returns ✨
 💰 Investment Amount: *RM${project.amount.toFixed(2)}*
 📈 Daily Return: *RM${dailyProfit.toFixed(2)}*
-⏰ Project Duration: ${project.days} days
-📊 Expected Return: You will receive a total of *RM${totalReturn.toFixed(2)}* (principal + returns).
-💡 Choices matter more than hard work, action determines the future. Today's small investment is tomorrow's big return. Keep going, you deserve better rewards! ✨`;
+⏰ Project Duration: *${project.days} days*
+📊 Expected Return: You will receive a total of *RM${totalReturn.toFixed(2)}* (*principal + returns*).
+💡 *Choices matter more than hard work, action determines the future. Today's small investment is tomorrow's big return. Keep going, you deserve better rewards!* ✨`;
 
-            const malay = `🎉 Tahniah kerana berjaya melanggan projek 【${project.name}】 tempoh ${project.days} hari!
+            const malay = `🎉 Tahniah kerana berjaya melanggan projek *【${project.name}】* tempoh *${project.days} hari*!
 Dana anda kini berada dalam mod operasi berkecekapan tinggi, memulakan perjalanan pulangan ✨
 💰 Jumlah Pelaburan: *RM${project.amount.toFixed(2)}*
 📈 Pulangan Harian: *RM${dailyProfit.toFixed(2)}*
-⏰ Tempoh Projek: ${project.days} hari
-📊 Jangkaan Pulangan: Anda akan menerima jumlah *RM${totalReturn.toFixed(2)}* (modal + pulangan).
-💡 Pilihan lebih penting daripada usaha, tindakan menentukan masa depan. Pelaburan kecil hari ini adalah pulangan besar esok. Teruskan, anda layak mendapat ganjaran yang lebih baik! ✨`;
+⏰ Tempoh Projek: *${project.days} hari*
+📊 Jangkaan Pulangan: Anda akan menerima jumlah *RM${totalReturn.toFixed(2)}* (*modal + pulangan*).
+💡 *Pilihan lebih penting daripada usaha, tindakan menentukan masa depan. Pelaburan kecil hari ini adalah pulangan besar esok. Teruskan, anda layak mendapat ganjaran yang lebih baik!* ✨`;
 
             return { chinese, english, malay };
         }
