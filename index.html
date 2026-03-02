@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能投资计算器 | Investment Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Input Styling */
+        input[type="number"], input[type="text"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Animations */
+        @keyframes gradient-x {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .animate-gradient {
+            background-size: 200% 200%;
+            animation: gradient-x 3s ease infinite;
+        }
+        
+        .card-enter {
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .glow-text {
+            text-shadow: 0 0 20px rgba(52, 211, 153, 0.5);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Input highlight animation */
+        .amount-input:focus {
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4 relative">
+
+    <!-- Background Effects -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-600/20 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/20 rounded-full blur-[120px]"></div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">已复制到剪贴板！</div>
+
+    <!-- Header -->
+    <header class="w-full max-w-6xl mb-10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div>
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 animate-gradient">
+                收益计算器
+            </h1>
+            <p class="text-slate-400 mt-2 text-sm md:text-base">自由配置投资周期 · 智能计算收益 · 多语言话术生成</p>
+        </div>
+        <button onclick="openModal()" class="group relative px-6 py-3 font-bold text-white rounded-xl overflow-hidden bg-emerald-600 shadow-lg shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95">
+            <span class="absolute w-0 h-0 transition-all duration-500 ease-out bg-white rounded-full group-hover:w-56 group-hover:h-56 opacity-10"></span>
+            <span class="relative flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                新建项目
+            </span>
+        </button>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Project List -->
+        <div class="lg:col-span-2 space-y-4" id="projectList">
+            <!-- Projects will be injected here via JS -->
+        </div>
+
+        <!-- Right Column: Summary & Visualization -->
+        <div class="lg:col-span-1 space-y-6">
+            
+            <!-- Total Summary Card -->
+            <div class="glass rounded-2xl p-6 sticky top-6 shadow-2xl border-t border-emerald-500/30">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    总览统计
+                </h2>
+
+                <div class="space-y-4">
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                        <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">总投资本金</p>
+                        <p class="text-2xl font-bold text-white mono mt-1" id="totalPrincipal">RM0.00</p>
+                    </div>
+                    
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 p-4 opacity-10">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" />
+                                <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" />
+                            </svg>
+                        </div>
+                        <p class="text-xs text-emerald-400 uppercase tracking-wider font-semibold">预计总收益</p>
+                        <p class="text-3xl font-extrabold text-emerald-400 mono mt-1 glow-text" id="totalProfit">RM0.00</p>
+                    </div>
+
+                    <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                        <p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">资金利用率 (总天数)</p>
+                        <div class="flex justify-between items-end mt-1">
+                            <p class="text-xl font-bold text-white mono" id="totalDays">0 天</p>
+                            <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300" id="avgRate">Avg 0%</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-1.5 mt-3 rounded-full overflow-hidden">
+                            <div id="progressBar" class="bg-gradient-to-r from-emerald-500 to-cyan-500 h-full rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Project Modal -->
+    <div id="modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass rounded-2xl p-8 w-full max-w-md border border-slate-600 transform scale-95 opacity-0 transition-all duration-300" id="modalContent">
+            <h3 class="text-2xl font-bold text-white mb-6">创建新项目</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm text-slate-400 mb-2">项目名称 <span class="text-emerald-400">*</span></label>
+                    <input type="text" id="modalName" placeholder="例如：牛肉罐头" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-2">投资天数 <span class="text-emerald-400">*</span></label>
+                        <input type="number" id="modalDays" value="1" min="1" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-2">日利率 (%) <span class="text-emerald-400">*</span></label>
+                        <input type="number" id="modalPercent" value="0.5" step="0.1" min="0" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-500 mt-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    创建后可在卡片中手动输入投资金额
+                </p>
+            </div>
+
+            <div class="flex gap-3 mt-8">
+                <button onclick="closeModal()" class="flex-1 py-3 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-800 transition-colors">取消</button>
+                <button onclick="confirmAddProject()" class="flex-1 py-3 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-500/25">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // State Management
+        let projects = [];
+
+        // DOM Elements
+        const projectListEl = document.getElementById('projectList');
+        const totalPrincipalEl = document.getElementById('totalPrincipal');
+        const totalProfitEl = document.getElementById('totalProfit');
+        const totalDaysEl = document.getElementById('totalDays');
+        const avgRateEl = document.getElementById('avgRate');
+        const progressBarEl = document.getElementById('progressBar');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modalContent');
+        const toast = document.getElementById('toast');
+
+        // Modal Functions
+        function openModal() {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+            document.getElementById('modalName').focus();
+        }
+
+        function closeModal() {
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function confirmAddProject() {
+            const name = document.getElementById('modalName').value.trim();
+            const days = parseInt(document.getElementById('modalDays').value) || 1;
+            const percent = parseFloat(document.getElementById('modalPercent').value) || 0;
+
+            if (!name) {
+                alert('请输入项目名称');
+                return;
+            }
+
+            const newId = Date.now();
+            projects.push({
+                id: newId,
+                name: name,
+                days: days,
+                percent: percent,
+                amount: 0  // 默认金额为0，创建后手动输入
+            });
+
+            closeModal();
+            renderProjects();
+            updateSummary();
+            
+            // Reset modal fields
+            document.getElementById('modalName').value = '';
+            document.getElementById('modalDays').value = '1';
+            document.getElementById('modalPercent').value = '0.5';
+
+            // 自动聚焦到新创建项目的金额输入框
+            setTimeout(() => {
+                const newInput = document.getElementById(`amount-${newId}`);
+                if(newInput) {
+                    newInput.focus();
+                    newInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 200);
+        }
+
+        // Remove Project
+        function removeProject(id) {
+            const card = document.getElementById(`card-${id}`);
+            
+            gsap.to(card, {
+                opacity: 0,
+                x: -50,
+                height: 0,
+                marginBottom: 0,
+                padding: 0,
+                duration: 0.4,
+                ease: "power2.in",
+                onComplete: () => {
+                    projects = projects.filter(p => p.id !== id);
+                    renderProjects();
+                    updateSummary();
+                }
+            });
+        }
+
+        // Update Project Data
+        function updateProject(id, field, value) {
+            const project = projects.find(p => p.id === id);
+            if (project) {
+                if (field === 'name') {
+                    project[field] = value;
+                } else {
+                    project[field] = parseFloat(value) || 0;
+                }
+                updateSummary();
+                updateCardDisplay(id);
+            }
+        }
+
+        function updateCardDisplay(id) {
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            
+            const dailyProfit = project.amount * (project.percent / 100);
+            const totalReturn = project.amount + (dailyProfit * project.days);
+            
+            const dailyEl = document.getElementById(`daily-${id}`);
+            const totalEl = document.getElementById(`total-${id}`);
+            
+            if (dailyEl) dailyEl.innerText = `RM${dailyProfit.toFixed(2)}`;
+            if (totalEl) totalEl.innerText = `RM${totalReturn.toFixed(2)}`;
+        }
+
+        // Generate Message Templates with *bold* format for WhatsApp
+        function generateMessages(project) {
+            const dailyProfit = project.amount * (project.percent / 100);
+            const totalReturn = project.amount + (dailyProfit * project.days);
+            
+            const chinese = `🎉 恭喜您成功认购【${project.name}】${project.days}天期项目！
+您的资金已正式进入高效运行模式，开启收益之旅 ✨
+💰 投入金额： *RM${project.amount.toFixed(2)}*
+📈 每日收益： *RM${dailyProfit.toFixed(2)}*
+⏰ 项目周期： ${project.days}天
+📊 预期回报： 您将获得总计 *RM${totalReturn.toFixed(2)}*（本金+收益）。
+💡 选择大于努力，行动决定未来。今天的小投入，就是明天的大回报。继续保持，您值得更好的收获！✨`;
+
+            const english = `🎉 Congratulations on successfully subscribing to the 【${project.name}】 ${project.days}-day project!
+Your funds are now in high-efficiency operation mode, starting the journey of returns ✨
+💰 Investment Amount: *RM${project.amount.toFixed(2)}*
+📈 Daily Return: *RM${dailyProfit.toFixed(2)}*
+⏰ Project Duration: ${project.days} days
+📊 Expected Return: You will receive a total of *RM${totalReturn.toFixed(2)}* (principal + returns).
+💡 Choices matter more than hard work, action determines the future. Today's small investment is tomorrow's big return. Keep going, you deserve better rewards! ✨`;
+
+            const malay = `🎉 Tahniah kerana berjaya melanggan projek 【${project.name}】 tempoh ${project.days} hari!
+Dana anda kini berada dalam mod operasi berkecekapan tinggi, memulakan perjalanan pulangan ✨
+💰 Jumlah Pelaburan: *RM${project.amount.toFixed(2)}*
+📈 Pulangan Harian: *RM${dailyProfit.toFixed(2)}*
+⏰ Tempoh Projek: ${project.days} hari
+📊 Jangkaan Pulangan: Anda akan menerima jumlah *RM${totalReturn.toFixed(2)}* (modal + pulangan).
+💡 Pilihan lebih penting daripada usaha, tindakan menentukan masa depan. Pelaburan kecil hari ini adalah pulangan besar esok. Teruskan, anda layak mendapat ganjaran yang lebih baik! ✨`;
+
+            return { chinese, english, malay };
+        }
+
+        // Copy to Clipboard
+        function copyMessage(id, lang) {
+            const project = projects.find(p => p.id === id);
+            if (!project) return;
+            
+            const messages = generateMessages(project);
+            const text = messages[lang];
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`已复制${lang === 'chinese' ? '中文' : lang === 'english' ? '英文' : '马来语'}话术`);
+            }).catch(err => {
+                // Fallback
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast(`已复制${lang === 'chinese' ? '中文' : lang === 'english' ? '英文' : '马来语'}话术`);
+            });
+        }
+
+        function showToast(message) {
+            toast.innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Render Projects
+        function renderProjects() {
+            projectListEl.innerHTML = '';
+            
+            if (projects.length === 0) {
+                projectListEl.innerHTML = `
+                    <div class="text-center py-12 border-2 border-dashed border-slate-700 rounded-2xl">
+                        <p class="text-slate-500 text-lg">暂无项目，点击右上角添加</p>
+                    </div>
+                `;
+                return;
+            }
+
+            projects.forEach((p, index) => {
+                const dailyProfit = p.amount * (p.percent / 100);
+                const totalReturn = p.amount + (dailyProfit * p.days);
+                
+                const html = `
+                    <div id="card-${p.id}" class="glass rounded-2xl p-5 md:p-6 card-enter relative group border border-slate-700 hover:border-emerald-500/50 transition-colors">
+                        <div class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="removeProject(${p.id})" class="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-800 transition-colors" title="删除项目">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <!-- Project Name -->
+                        <div class="mb-4 pr-8">
+                            <label class="block text-xs text-slate-400 mb-1">项目名称</label>
+                            <input type="text" value="${p.name}" onchange="updateProject(${p.id}, 'name', this.value)" 
+                                class="w-full bg-transparent text-xl font-bold text-white focus:outline-none border-b border-transparent hover:border-slate-600 focus:border-emerald-500 transition-colors pb-1">
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                            
+                            <!-- Project Settings -->
+                            <div class="md:col-span-7 grid grid-cols-3 gap-3">
+                                <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                                    <label class="block text-xs text-slate-400 mb-1">周期(天)</label>
+                                    <input type="number" value="${p.days}" onchange="updateProject(${p.id}, 'days', this.value)" 
+                                        class="w-full bg-transparent text-white font-bold text-lg focus:outline-none mono" min="1">
+                                </div>
+                                <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50">
+                                    <label class="block text-xs text-slate-400 mb-1">日利率(%)</label>
+                                    <input type="number" step="0.01" value="${p.percent}" onchange="updateProject(${p.id}, 'percent', this.value)" 
+                                        class="w-full bg-transparent text-emerald-400 font-bold text-lg focus:outline-none mono" min="0">
+                                </div>
+                                <div class="bg-slate-800/50 p-3 rounded-lg border border-slate-700/50 ring-2 ring-emerald-500/20">
+                                    <label class="block text-xs text-emerald-400 mb-1 font-semibold">投入金额(RM)</label>
+                                    <input type="number" id="amount-${p.id}" value="${p.amount || ''}" placeholder="0" oninput="updateProject(${p.id}, 'amount', this.value)" 
+                                        class="amount-input w-full bg-transparent text-white font-bold text-lg focus:outline-none mono placeholder-slate-600" min="0">
+                                </div>
+                            </div>
+
+                            <!-- Profit Display -->
+                            <div class="md:col-span-5 flex flex-col gap-2 bg-emerald-900/20 p-4 rounded-xl border border-emerald-500/20">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-emerald-400">每日收益</span>
+                                    <span id="daily-${p.id}" class="text-lg font-bold text-emerald-400 mono">RM${dailyProfit.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-slate-400">到期总额</span>
+                                    <span id="total-${p.id}" class="text-xl font-bold text-white mono">RM${totalReturn.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Copy Buttons -->
+                        <div class="mt-4 pt-4 border-t border-slate-700/50 flex gap-2 justify-end flex-wrap">
+                            <span class="text-xs text-slate-500 self-center mr-auto">复制话术：</span>
+                            <button onclick="copyMessage(${p.id}, 'chinese')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs text-white transition-colors flex items-center gap-1 hover:border-emerald-500/50">
+                                🇨🇳 中文
+                            </button>
+                            <button onclick="copyMessage(${p.id}, 'english')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs text-white transition-colors flex items-center gap-1 hover:border-emerald-500/50">
+                                🇬🇧 English
+                            </button>
+                            <button onclick="copyMessage(${p.id}, 'malay')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs text-white transition-colors flex items-center gap-1 hover:border-emerald-500/50">
+                                🇲🇾 Melayu
+                            </button>
+                        </div>
+                    </div>
+                `;
+                projectListEl.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Calculate and Update Summary
+        function updateSummary() {
+            let totalPrincipal = 0;
+            let totalProfit = 0;
+            let totalDays = 0;
+            let weightedRateSum = 0;
+
+            projects.forEach(p => {
+                const dailyProfit = p.amount * (p.percent / 100);
+                const profit = dailyProfit * p.days;
+                totalPrincipal += p.amount;
+                totalProfit += profit;
+                totalDays += p.days;
+                weightedRateSum += p.percent;
+            });
+
+            const avgRate = projects.length ? (weightedRateSum / projects.length).toFixed(2) : 0;
+
+            animateValue(totalPrincipalEl, totalPrincipal);
+            animateValue(totalProfitEl, totalProfit);
+            
+            totalDaysEl.innerText = `${totalDays} 天`;
+            avgRateEl.innerText = `Avg ${avgRate}%`;
+            
+            const maxDaysVisual = 100; 
+            const progressPct = Math.min((totalDays / maxDaysVisual) * 100, 100);
+            progressBarEl.style.width = `${progressPct}%`;
+        }
+
+        // Helper: Number Animation
+        function animateValue(obj, end) {
+            obj.innerHTML = `RM${end.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            gsap.fromTo(obj, {scale: 1.05, color: "#fff"}, {scale: 1, color: end > 0 ? "#34d399" : "#fff", duration: 0.3});
+        }
+
+        // Close modal on outside click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        // Enter key to submit modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !modal.classList.contains('hidden')) {
+                confirmAddProject();
+            }
+        });
+
+    </script>
+</body>
+</html>
